@@ -1,0 +1,31 @@
+# Build
+build/
+cmake-build-*/
+
+# Visual Studio
+.vs/
+*.suo
+*.user
+*.userosscache
+*.sln
+*.vcxproj
+*.vcxproj.filters
+
+# Fichiers compilé
+*.exe
+*.dll
+*.obj
+*.o
+*.a
+*.lib
+
+# IDE
+.idea/
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Personnel
+note.txt
