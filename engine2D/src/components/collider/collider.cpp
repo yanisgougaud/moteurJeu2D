@@ -1,67 +1,127 @@
 #include "../../../include/components/collider/collider.hpp"
+#include "../../../include/components/transform/transform.hpp"
 #include "../../../include/math/math.hpp"
 
-sf::Vector2f Collider::support( sf::Vector2f direction ) const {
-    const float epsilon = 0.000001f;
+#include <cmath>
+#include <limits>
+#include <algorithm>
 
-    sf::Vector2f center = {
-        transform.position.x + size.x / 2.f,
-        transform.position.y + size.y / 2.f
-    };
 
-    float halfWidth = transform.size.x / 2.f;
-    float halfHeight = transform.size.y / 2.f;
-    float radiusX = halfWidth * shape.x;
-    float radiusY = halfHeight * shape.y;
-    float rectangleHalfWidth = halfWidth - radiusX;
-    float rectangleHalfHeight = halfHeight - radiusY;
+void Collider::calculateSize()
+{
+    if ( vertices.empty() ) {
+        size = { 0.0f, 0.0f };
+        return;
+    }
+    const float cosAngle = std::cos( transform.radiantAngle );
+    const float sinAngle = std::sin( transform.radiantAngle );
 
-    sf::Vector2f point = center;
+    float minX = std::numeric_limits<float>::max();
+    float minY = std::numeric_limits<float>::max();
 
-    if ( direction.x > 0.f ) point.x += rectangleHalfWidth;
-    else point.x -= rectangleHalfWidth;
+    float maxX = std::numeric_limits<float>::lowest();
+    float maxY = std::numeric_limits<float>::lowest();
 
-    if ( direction.y > 0.f ) point.y += rectangleHalfHeight;
-    else point.y -= rectangleHalfHeight;
+    for ( const Vector2D& vertex : vertices ) {
+        Vector2D scaledVertex = {
+            vertex.x * transform.scale.x,
+            vertex.y * transform.scale.y
+        };
 
-    float denominator = std::sqrt(
-        radiusX * radiusX * direction.x * direction.x +
-        radiusY * radiusY * direction.y * direction.y
-    );
+        Vector2D rotatedVertex = {
+            scaledVertex.x * cosAngle - scaledVertex.y * sinAngle,
+            scaledVertex.x * sinAngle + scaledVertex.y * cosAngle
+        };
 
-    if ( denominator > epsilon ) {
-        point.x += radiusX * radiusX * direction.x / denominator;
-        point.y += radiusY * radiusY * direction.y / denominator;
+        minX = std::min( minX, rotatedVertex.x );
+        minY = std::min( minY, rotatedVertex.y );
+
+        maxX = std::max( maxX, rotatedVertex.x );
+        maxY = std::max( maxY, rotatedVertex.y );
     }
 
-    return point;
+    size = {
+        maxX - minX,
+        maxY - minY
+    };
 }
 
-sf::Vector2f Collider::supportMinkowski( const Collider& colliderA, const Collider& colliderB, sf::Vector2f direction ) {
-    
-    sf::Vector2f pointA = colliderA.support( direction );
-    sf::Vector2f pointB = colliderB.support( Math::opposite( direction ) );
+Vector2D Collider::support( const Vector2D direction ) const {
+
+    if ( vertices.empty() )  return transform.position;
+
+    const float cosAngle = std::cos( transform.radiantAngle );
+    const float sinAngle = std::sin( transform.radiantAngle );
+
+    Vector2D farthestPoint;
+    float maxDotProduct = std::numeric_limits<float>::lowest();
+
+    for ( const Vector2D& vertex : vertices ) {
+
+        Vector2D scaledVertex = {
+            vertex.x * transform.scale.x,
+            vertex.y * transform.scale.y
+        };
+
+        Vector2D rotatedVertex = {
+            scaledVertex.x * cosAngle - scaledVertex.y * sinAngle,
+            scaledVertex.x * sinAngle + scaledVertex.y * cosAngle
+        };
+
+        Vector2D placedVertex = {
+            transform.position.x + rotatedVertex.x,
+            transform.position.y + rotatedVertex.y
+        };
+
+        float dotProduct = placedVertex.dotProduct( direction );
+
+        if ( dotProduct > maxDotProduct ) {
+            maxDotProduct = dotProduct;
+            farthestPoint = placedVertex;
+        }
+    }
+
+    return farthestPoint;
+}
+
+Vector2D Collider::supportMinkowski(
+    const Collider& colliderA,
+    const Collider& colliderB,
+    const Vector2D direction
+)
+{
+    Vector2D pointA = colliderA.support( direction );
+    Vector2D pointB = colliderB.support( -direction );
 
     return pointA - pointB;
 }
 
+bool Collider::nextSimplex(
+    std::vector<Vector2D>& simplex,
+    Vector2D& direction
+)
+{
 
-bool Collider::nextSimplex( std::vector<sf::Vector2f>& simplex, sf::Vector2f& direction ) {
+    if ( simplex.size() == 2 ) {
 
-    if ( simplex.size() == 2 )
-    {
-        sf::Vector2f A = simplex[1];
-        sf::Vector2f B = simplex[0];
+        Vector2D A = simplex[1];
+        Vector2D B = simplex[0];
+        Vector2D AO = -A;
+        Vector2D AB = B - A;
 
-        sf::Vector2f AO = -A;
-        sf::Vector2f AB = B - A;
+        if ( std::abs( AB.cross( AO ) ) < Math::EPSILON )
+            if ( AO.dotProduct( AB ) >= - Math::EPSILON && AO.lengthSquared() <= AB.lengthSquared() ) return true;
 
-        if ( Math::dotProduct( AB, AO ) > 0.f ) {
-            direction = { -AB.y, AB.x };
+        if ( AB.dotProduct( AO ) > Math::EPSILON ) {
+            direction = {
+                -AB.y,
+                AB.x
+            };
 
-            if ( Math::dotProduct( direction, AO ) < 0.f) direction = -direction;
+            if ( direction.dotProduct( AO ) < - Math::EPSILON ) direction = -direction; 
         }
-        else {
+        else
+        {
             simplex = { A };
             direction = AO;
         }
@@ -69,83 +129,85 @@ bool Collider::nextSimplex( std::vector<sf::Vector2f>& simplex, sf::Vector2f& di
         return false;
     }
 
-    if ( simplex.size() == 3 )
-    {
-        sf::Vector2f A = simplex[2];
-        sf::Vector2f B = simplex[1];
-        sf::Vector2f C = simplex[0];
+    if ( simplex.size() == 3 ) {
 
-        sf::Vector2f AO = -A;
-        sf::Vector2f AB = B - A;
-        sf::Vector2f AC = C - A;
+        Vector2D A = simplex[2];
+        Vector2D B = simplex[1];
+        Vector2D C = simplex[0];
+        Vector2D AO = -A;
+        Vector2D AB = B - A;
+        
+        Vector2D ABPerpendicular = AB.perpendicular();
 
-        sf::Vector2f ABPerpendicular = { -AB.y, AB.x };
+        if ( ABPerpendicular.dotProduct( C - A ) > Math::EPSILON) ABPerpendicular = -ABPerpendicular;
 
-        if ( Math::dotProduct( ABPerpendicular, C - A ) > 0.f ) ABPerpendicular = -ABPerpendicular;
-
-        if ( Math::dotProduct( ABPerpendicular, AO ) > 0.f ) {
+        if ( ABPerpendicular.dotProduct( AO ) > Math::EPSILON ) {
             simplex = { B, A };
             direction = ABPerpendicular;
 
             return false;
         }
 
-        sf::Vector2f ACPerpendicular = { AC.y, -AC.x };
+        Vector2D AC = C - A;
+        Vector2D ACPerpendicular = AC.perpendicular();
 
-        if ( Math::dotProduct( ACPerpendicular, B - A ) > 0.f ) ACPerpendicular = -ACPerpendicular;
+        if ( ACPerpendicular.dotProduct( B - A ) > Math::EPSILON ) ACPerpendicular = -ACPerpendicular;
 
-        if ( Math::dotProduct( ACPerpendicular, AO ) > 0.f ) {
+        if ( ACPerpendicular.dotProduct( AO ) > Math::EPSILON )  {
             simplex = { C, A };
             direction = ACPerpendicular;
 
             return false;
         }
-
         return true;
     }
 
     return false;
 }
 
-
-
 bool Collider::checkCollision( const Collider& other ) const {
 
-    shape = { shape.x % 1 if shape.x != 1 else 1, shape.y % 1 if shape.y != 1 else 1 }
-    other.shape = { shape.x % 1 if shape.x != 1 else 1, shape.y % 1 if shape.y != 1 else 1 }
+    if ( vertices.empty() || other.vertices.empty() ) return false;
 
-    sf::Vector2f centerA = {
-        transform.position.x + transform.size.x / 2.f,
-        transform.position.y + transform.size.y / 2.f
-    };
+    Vector2D centerA = transform.position + size.x / 2;
+    Vector2D centerB = other.transform.position + other.size.x / 2;
+    Vector2D direction = centerB - centerA;
 
-    sf::Vector2f centerB = {
-        other.transform.position.x + other.transform.size.x / 2.f,
-        other.transform.position.y + other.transform.size.y / 2.f
-    };
+    if ( direction.x == 0.0f && direction.y == 0.0f ) direction = { 1.0f, 0.0f };
 
-    sf::Vector2f direction = centerB - centerA;
+    Vector2D point = supportMinkowski(
+        *this,
+        other,
+        direction
+    );
 
-    if ( direction.x == 0.f && direction.y == 0.f ) direction = { 1.f, 0.f };
+    if ( point.dotProduct( direction ) < - Math::EPSILON ) return false;
 
-    std::vector<sf::Vector2f> simplex;
-    sf::Vector2f point = supportMinkowski( *this, other, direction );
+    std::vector<Vector2D> simplex;
     simplex.push_back( point );
+    direction = -point;
 
-    if ( Math::dotProduct( point, direction ) < 0.f ) return false;
-    direction = Math::opposite( point );
+    constexpr int maxIterations = 16;
 
-    const int maxIterations = 16;
+    for (int i = 0; i < maxIterations; ++i) {
 
-    for ( int i = 0; i < maxIterations; ++i ) {
+        point = supportMinkowski(
+            *this,
+            other,
+            direction
+        );
 
-        point = supportMinkowski( *this, other, direction );
+        if ( point.dotProduct( direction ) < - Math::EPSILON ) return false;
 
-        if ( Math::dotProduct( point, direction ) < 0.f ) return false;
         simplex.push_back( point );
 
-        if ( nextSimplex( simplex, direction ) ) return true;
+        if ( nextSimplex( simplex, direction ) )  return true;
     }
 
     return false;
 }
+
+
+// ! Ajouter une valeur size sensible à la rotation et au scale
+// ! Faire que la valeur de size change si rotate ou scale change
+// !!! Ajouter une vérification que tous les vertexe soit positif de base // Titouan

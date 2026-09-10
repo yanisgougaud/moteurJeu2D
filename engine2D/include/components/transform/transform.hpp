@@ -1,21 +1,23 @@
 #pragma once
 
-#include <SFML/System/Vector2.hpp>
+#include "../../math/Vector2D.hpp"
 
 struct Transform {
 
-    sf::Vector2<float> position;
-    sf::Vector2<float> scale;
+    Vector2D position;
+    Vector2D scale;
     float rotation;
+    float radiantAngle;
 
     Transform(
-        sf::Vector2<float> position = { 0.0f, 0.0f },
-        sf::Vector2<float> scale = { 1.0f, 1.0f },
+        Vector2D position = { 0.0f, 0.0f },
+        Vector2D scale = { 1.0f, 1.0f },
         float rotation = 0.0f
     )
         : position( position ),
           scale( scale ),
-          rotation( rotation )
+          rotation( rotation ),
+          radiantAngle( radiantAngle = rotation * M_PI / 180.0f )
     {
     }
 };

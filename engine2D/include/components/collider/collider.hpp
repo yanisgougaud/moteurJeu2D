@@ -1,35 +1,46 @@
 #pragma once
 
-#include <SFML/System/Vector2.hpp>
+#include "../../math/Vector2D.hpp"
+
 #include <vector>
-#include <cmath>
 
 struct Collider {
 
     Transform& transform;
+    std::vector<Vector2D> vertices;
 
-    sf::Vector2<float> size;
-    sf::Vector2<float> shape; // 0 = carrée; 1 = cercle
-
-    
-
-
-    Collider( Transform& transform, sf::Vector2<float> size = { 0.0f, 0.0f }, sf::Vector2<float> shape = { 0.0f, 0.0f } )
-            : transform( transform ),
-            size( size ),
-            shape( shape )
+    Collider(
+        Transform& transform,
+        std::vector<Vector2D> vertices = {}
+    )
+        : transform( transform ),
+          vertices( vertices ),
+          size(0.0f, 0.0f)
     {
+        calculateSize();
     }
-
 
     bool checkCollision( const Collider& otherCollider ) const;
 
+
 private:
 
-    sf::Vector2f support( sf::Vector2f direction ) const;
+    Vector2D size;
 
-    static sf::Vector2f supportMinkowski( const Collider& a, const Collider& b, sf::Vector2f direction );
+    unsigned int lastTransformVersion = 0;
 
-    static bool nextSimplex( std::vector<sf::Vector2f>& simplex, sf::Vector2f& direction );
+    calculateSize();
 
+    Vector2D support( Vector2D direction ) const;
+
+    static Vector2D supportMinkowski(
+        const Collider& a,
+        const Collider& b,
+        Vector2D direction
+    );
+
+    static bool nextSimplex(
+        std::vector<Vector2D>& simplex,
+        Vector2D& direction
+    );
 };

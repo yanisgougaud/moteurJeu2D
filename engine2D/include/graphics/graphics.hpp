@@ -8,8 +8,8 @@
 class Graphics {
 public:
 
-    Graphics(const Graphics&) = delete;
-    Graphics& operator=(const Graphics&) = delete;
+    Graphics( const Graphics& ) = delete;
+    Graphics& operator=( const Graphics& ) = delete;
 
     static Graphics& getInstance() {
         static Graphics instance;
