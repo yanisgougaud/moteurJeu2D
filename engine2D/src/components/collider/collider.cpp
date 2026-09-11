@@ -7,43 +7,47 @@
 #include <algorithm>
 
 
-void Collider::calculateSize()
+const Vector2D& Collider::getSize()
 {
-    if ( vertices.empty() ) {
-        size = { 0.0f, 0.0f };
-        return;
-    }
-    const float cosAngle = std::cos( transform.radiantAngle );
-    const float sinAngle = std::sin( transform.radiantAngle );
+    if ( vertices.empty() )  return { 0.0f, 0.0f };
 
-    float minX = std::numeric_limits<float>::max();
-    float minY = std::numeric_limits<float>::max();
+    if ( transform.getLastVersion() != lastTransformVersion ) {
 
-    float maxX = std::numeric_limits<float>::lowest();
-    float maxY = std::numeric_limits<float>::lowest();
+        const float cosAngle = std::cos( transform.getRadiantAngle() );
+        const float sinAngle = std::sin( transform.getRadiantAngle() );
 
-    for ( const Vector2D& vertex : vertices ) {
-        Vector2D scaledVertex = {
-            vertex.x * transform.scale.x,
-            vertex.y * transform.scale.y
+        float minX = std::numeric_limits<float>::max();
+        float minY = std::numeric_limits<float>::max();
+
+        float maxX = std::numeric_limits<float>::lowest();
+        float maxY = std::numeric_limits<float>::lowest();
+
+        for ( const Vector2D& vertex : vertices ) {
+            Vector2D scaledVertex = {
+                vertex.x * transform.scale.x,
+                vertex.y * transform.scale.y
+            };
+
+            Vector2D rotatedVertex = {
+                scaledVertex.x * cosAngle - scaledVertex.y * sinAngle,
+                scaledVertex.x * sinAngle + scaledVertex.y * cosAngle
+            };
+
+            minX = std::min( minX, rotatedVertex.x );
+            minY = std::min( minY, rotatedVertex.y );
+
+            maxX = std::max( maxX, rotatedVertex.x );
+            maxY = std::max( maxY, rotatedVertex.y );
+        }
+
+        size = {
+            maxX - minX,
+            maxY - minY
         };
-
-        Vector2D rotatedVertex = {
-            scaledVertex.x * cosAngle - scaledVertex.y * sinAngle,
-            scaledVertex.x * sinAngle + scaledVertex.y * cosAngle
-        };
-
-        minX = std::min( minX, rotatedVertex.x );
-        minY = std::min( minY, rotatedVertex.y );
-
-        maxX = std::max( maxX, rotatedVertex.x );
-        maxY = std::max( maxY, rotatedVertex.y );
+        lastTransformVersion = transform.getLastVersion();
     }
 
-    size = {
-        maxX - minX,
-        maxY - minY
-    };
+    return size;
 }
 
 Vector2D Collider::support( const Vector2D direction ) const {
@@ -206,8 +210,3 @@ bool Collider::checkCollision( const Collider& other ) const {
 
     return false;
 }
-
-
-// ! Ajouter une valeur size sensible à la rotation et au scale
-// ! Faire que la valeur de size change si rotate ou scale change
-// !!! Ajouter une vérification que tous les vertexe soit positif de base // Titouan

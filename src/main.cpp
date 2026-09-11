@@ -4,7 +4,7 @@ int main()
 {
     sf::RenderWindow window(
         sf::VideoMode({800, 600}),
-        "Mon Moteur 2D"
+        "Moteur 2D"
     );
 
     sf::CircleShape circle(100.f);

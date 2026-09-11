@@ -16,9 +16,6 @@ public:
         return instance;
     }
 
-
-
-
 private:
     Graphics() { }
 
