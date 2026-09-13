@@ -98,8 +98,8 @@ struct Vector2D
 
     Vector2D perpendicular() {
         return {
-            AB.y,
-            AB.x
-        }
+            -y,
+            x
+        };
     }
 };

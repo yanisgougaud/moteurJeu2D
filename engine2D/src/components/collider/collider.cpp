@@ -6,94 +6,81 @@
 #include <limits>
 #include <algorithm>
 
+void Collider::calculateSize() {
 
-const Vector2D& Collider::getSize()
-{
-    if ( vertices.empty() )  return { 0.0f, 0.0f };
-
-    if ( transform.getLastVersion() != lastTransformVersion ) {
-
-        const float cosAngle = std::cos( transform.getRadiantAngle() );
-        const float sinAngle = std::sin( transform.getRadiantAngle() );
-
-        float minX = std::numeric_limits<float>::max();
-        float minY = std::numeric_limits<float>::max();
-
-        float maxX = std::numeric_limits<float>::lowest();
-        float maxY = std::numeric_limits<float>::lowest();
-
-        for ( const Vector2D& vertex : vertices ) {
-            Vector2D scaledVertex = {
-                vertex.x * transform.scale.x,
-                vertex.y * transform.scale.y
-            };
-
-            Vector2D rotatedVertex = {
-                scaledVertex.x * cosAngle - scaledVertex.y * sinAngle,
-                scaledVertex.x * sinAngle + scaledVertex.y * cosAngle
-            };
-
-            minX = std::min( minX, rotatedVertex.x );
-            minY = std::min( minY, rotatedVertex.y );
-
-            maxX = std::max( maxX, rotatedVertex.x );
-            maxY = std::max( maxY, rotatedVertex.y );
-        }
-
-        size = {
-            maxX - minX,
-            maxY - minY
-        };
-        lastTransformVersion = transform.getLastVersion();
+    if ( vertices.empty() ) {
+        size = { 0.0f, 0.0f };
+        return;
     }
 
-    return size;
+    float minX = std::numeric_limits<float>::max();
+    float minY = std::numeric_limits<float>::max();
+
+    float maxX = std::numeric_limits<float>::lowest();
+    float maxY = std::numeric_limits<float>::lowest();
+
+    for ( const Vector2D& vertex : vertices ) {
+
+        minX = std::min( minX, vertex.x );
+        minY = std::min( minY, vertex.y );
+
+        maxX = std::max( maxX, vertex.x );
+        maxY = std::max( maxY, vertex.y );
+    }
+
+    size = {
+        maxX - minX,
+        maxY - minY
+    };
 }
 
 Vector2D Collider::support( const Vector2D direction ) const {
+    if ( vertices.empty() ) return transform.getPosition();
 
-    if ( vertices.empty() )  return transform.position;
+    const float cosAngle = std::cos( transform.getRadianAngle() );
+    const float sinAngle = std::sin( transform.getRadianAngle() );
 
-    const float cosAngle = std::cos( transform.radiantAngle );
-    const float sinAngle = std::sin( transform.radiantAngle );
+    Vector2D centerOfGravity = { transform.getCenterOfGravityX() - transform.getOriginX(), transform.getCenterOfGravityY() - transform.getOriginY() };
+    centerOfGravity.x *= transform.getScaleX();
+    centerOfGravity.y *= transform.getScaleY();
 
     Vector2D farthestPoint;
     float maxDotProduct = std::numeric_limits<float>::lowest();
 
-    for ( const Vector2D& vertex : vertices ) {
+    for (const Vector2D& vertex : vertices) {
 
-        Vector2D scaledVertex = {
-            vertex.x * transform.scale.x,
-            vertex.y * transform.scale.y
+        Vector2D vertexPosition = { -transform.getOriginX() + vertex.x, -transform.getOriginY() + vertex.y };
+
+        vertexPosition.x *= transform.getScaleX();
+        vertexPosition.y *= transform.getScaleY();
+
+        Vector2D relativePosition = vertexPosition - centerOfGravity;
+
+        Vector2D rotatedPosition = {
+            relativePosition.x * cosAngle + relativePosition.y * sinAngle,
+            -relativePosition.x * sinAngle + relativePosition.y * cosAngle
         };
 
-        Vector2D rotatedVertex = {
-            scaledVertex.x * cosAngle - scaledVertex.y * sinAngle,
-            scaledVertex.x * sinAngle + scaledVertex.y * cosAngle
-        };
+        Vector2D finalPosition = rotatedPosition + centerOfGravity;
+        finalPosition += transform.getPosition();
 
-        Vector2D placedVertex = {
-            transform.position.x + rotatedVertex.x,
-            transform.position.y + rotatedVertex.y
-        };
+        float dotProduct = finalPosition.dotProduct(direction);
 
-        float dotProduct = placedVertex.dotProduct( direction );
-
-        if ( dotProduct > maxDotProduct ) {
+        if (dotProduct > maxDotProduct) {
             maxDotProduct = dotProduct;
-            farthestPoint = placedVertex;
+            farthestPoint = finalPosition;
         }
     }
 
     return farthestPoint;
 }
 
+
 Vector2D Collider::supportMinkowski(
     const Collider& colliderA,
     const Collider& colliderB,
     const Vector2D direction
-)
-{
+) {
     Vector2D pointA = colliderA.support( direction );
     Vector2D pointB = colliderB.support( -direction );
 
@@ -103,8 +90,7 @@ Vector2D Collider::supportMinkowski(
 bool Collider::nextSimplex(
     std::vector<Vector2D>& simplex,
     Vector2D& direction
-)
-{
+) {
 
     if ( simplex.size() == 2 ) {
 
@@ -117,10 +103,7 @@ bool Collider::nextSimplex(
             if ( AO.dotProduct( AB ) >= - Math::EPSILON && AO.lengthSquared() <= AB.lengthSquared() ) return true;
 
         if ( AB.dotProduct( AO ) > Math::EPSILON ) {
-            direction = {
-                -AB.y,
-                AB.x
-            };
+            direction = AB.perpendicular();
 
             if ( direction.dotProduct( AO ) < - Math::EPSILON ) direction = -direction; 
         }
@@ -146,6 +129,7 @@ bool Collider::nextSimplex(
         if ( ABPerpendicular.dotProduct( C - A ) > Math::EPSILON) ABPerpendicular = -ABPerpendicular;
 
         if ( ABPerpendicular.dotProduct( AO ) > Math::EPSILON ) {
+            
             simplex = { B, A };
             direction = ABPerpendicular;
 
@@ -173,11 +157,9 @@ bool Collider::checkCollision( const Collider& other ) const {
 
     if ( vertices.empty() || other.vertices.empty() ) return false;
 
-    Vector2D centerA = transform.position + size.x / 2;
-    Vector2D centerB = other.transform.position + other.size.x / 2;
-    Vector2D direction = centerB - centerA;
-
-    if ( direction.x == 0.0f && direction.y == 0.0f ) direction = { 1.0f, 0.0f };
+    Vector2D direction = other.transform.getPosition() - transform.getPosition();
+    
+    if ( std::abs( direction.x ) < Math::EPSILON && std::abs( direction.y ) < Math::EPSILON ) direction = { 1.0f, 0.0f };
 
     Vector2D point = supportMinkowski(
         *this,
@@ -193,7 +175,7 @@ bool Collider::checkCollision( const Collider& other ) const {
 
     constexpr int maxIterations = 16;
 
-    for (int i = 0; i < maxIterations; ++i) {
+    for ( int i = 0; i < maxIterations; ++i ) {
 
         point = supportMinkowski(
             *this,
