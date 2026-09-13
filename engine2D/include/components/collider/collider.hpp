@@ -1,5 +1,6 @@
 #pragma once
 
+#include "../transform/transform.hpp"
 #include "../../math/Vector2D.hpp"
 
 #include <vector>
@@ -9,7 +10,6 @@ class Collider {
     std::vector<Vector2D> vertices;
     Transform& transform;
     Vector2D size;
-    unsigned int lastTransformVersion = 0;
     unsigned int lastVersion = 0;
 
     Vector2D support( Vector2D direction ) const;
@@ -25,6 +25,8 @@ class Collider {
         Vector2D& direction
     );
 
+    void calculateSize();
+
 public:
 
     Collider(
@@ -32,28 +34,26 @@ public:
         std::vector<Vector2D> vertices = {}
     )
         : transform( transform ),
-          vertices( vertices ),
-          size(getSize())
+          vertices( vertices )
     {
+        calculateSize();
     }
 
     void setVertices( const std::vector<Vector2D>& newVertices ) {
-        for ( Vector2D newVertice : newVertices )
-            if ( newVertice.x < 0.0f || newVertice.y < 0.0f ) throw std::runtime_error( "Les sommets de la figure doivent être positifs." );
         vertices = newVertices;
+        calculateSize();
         ++lastVersion;
     }
 
     void addVertice( const Vector2D& newVertice ) {
-        if ( newVertice.x < 0.0f || newVertice.y < 0.0f ) throw std::runtime_error( "Les sommets de la figure doivent être positifs." );
-        vertices.insert( vertices.end(), newVertices );
+        vertices.push_back(newVertice);
+        calculateSize();
         ++lastVersion;
     }
 
     void addVertices( const std::vector<Vector2D>& newVertices ) {
-        for ( Vector2D newVertice : newVertices )
-            if ( newVertice.x < 0.0f || newVertice.y < 0.0f ) throw std::runtime_error( "Les sommets de la figure doivent être positifs." );
         vertices.insert( vertices.end() , newVertices.begin(), newVertices.end() );
+        calculateSize();
         ++lastVersion;
     }
 
@@ -61,12 +61,14 @@ public:
         return vertices;
     }
 
-    const Vector2D& getSize() const;
+    const Vector2D& getSize() const {
+        return size;
+    }
 
     bool checkCollision( const Collider& otherCollider ) const;
 
     const unsigned int getLastVersion() const {
-        return lastVersion
+        return lastVersion;
     }
     
 };

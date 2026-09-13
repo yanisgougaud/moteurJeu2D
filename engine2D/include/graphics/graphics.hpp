@@ -16,6 +16,9 @@ public:
         return instance;
     }
 
+    // Récupéré tous les éléments affichable
+    // Trier ceux hors limite de l'affichage à l'écran
+
 private:
     Graphics() { }
 

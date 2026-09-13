@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../../math/Vector2D.hpp"
+#include "../../math/math.hpp"
 
 #include <stdexcept>
 #include <cmath>
@@ -9,8 +10,10 @@ class Transform {
 
     Vector2D position;
     Vector2D scale;
+    Vector2D origin;
+    Vector2D centerOfGravity;
     float rotation;
-    float radiantAngle;
+    float radianAngle;
     unsigned int lastVersion = 0;
 
 public:
@@ -18,14 +21,20 @@ public:
     Transform(
         Vector2D position = { 0.0f, 0.0f },
         Vector2D scale = { 1.0f, 1.0f },
-        float rotation = 0.0f,
-        float radiantAngle = 0.0f
+        Vector2D origin = { 0.0f, 0.0f },
+        Vector2D centerOfGravity = { 0.0f, 0.0f },
+        float rotation_ = 0.0f,
+        float radianAngle_ = 0.0f
     )
         : position( position ),
-          scale( scale )
+          scale( scale ),
+          origin( origin ),
+          centerOfGravity( centerOfGravity ),
+          rotation( 0.0f ),
+          radianAngle( 0.0f )
     {
-        if ( rotation == 0.0f && radiantAngle != 0.0f ) setRadiantAngle();
-        else setRotation();
+        if ( rotation_ == 0.0f && radianAngle_ != 0.0f ) setRadianAngle( radianAngle_ );
+        else setRotation( rotation_ );
     }
 
     void setPosition( const Vector2D& newPosition ) {
@@ -85,9 +94,64 @@ public:
         return scale.y;
     }
 
-    const setRotation( const float newRotation ) {
-        rotation = std::abs( std::fmod( newRotation, 360.0f ) );
-        radiantAngle = rotation * M_PI / 180.0f;
+    void setOrigin( const Vector2D& newOrigin ) {
+        origin = newOrigin;
+        ++lastVersion;
+    }
+
+    void setOriginX( const float newOriginX ) {
+        origin.x = newOriginX;
+        ++lastVersion;
+    }
+
+    void setOriginY( const float newOriginY ) {
+        origin.y = newOriginY;
+        ++lastVersion;
+    }
+
+    const Vector2D& getOrigin() const {
+        return origin;
+    }
+
+    const float& getOriginX() const {
+        return origin.x;
+    }
+
+    const float& getOriginY() const {
+        return origin.y;
+    }
+
+    void setCenterOfGravity( const Vector2D& newCenterOfGravity ) {
+        centerOfGravity = newCenterOfGravity;
+        ++lastVersion;
+    }
+
+    void setCenterOfGravityX( const float newCenterOfGravityX ) {
+        centerOfGravity.x = newCenterOfGravityX;
+        ++lastVersion;
+    }
+
+    void setCenterOfGravityY( const float newCenterOfGravityY ) {
+        centerOfGravity.y = newCenterOfGravityY;
+        ++lastVersion;
+    }
+
+    const Vector2D& getCenterOfGravity() const {
+        return centerOfGravity;
+    }
+
+    const float& getCenterOfGravityX() const {
+        return centerOfGravity.x;
+    }
+
+    const float& getCenterOfGravityY() const {
+        return centerOfGravity.y;
+    }
+
+    void setRotation( const float newRotation ) {
+        rotation = std::fmod( newRotation, 360.0f );
+        if ( rotation < 0.0f ) rotation += 360.0f;
+        radianAngle = rotation * Math::PI / 180.0f;
         ++lastVersion;
     }
 
@@ -95,18 +159,19 @@ public:
         return rotation;
     }
 
-    const setRadiantAngle( const float newRadiantAngle ) {
-        radiantAngle = std::abs( std::fmod( newRadiantAngle, 2 * M_PI ) );
-        radiantAngle = rotation * 180.0f / M_PI;
+    void setRadianAngle( const float newRadianAngle ) {
+        radianAngle =  std::fmod( newRadianAngle, 2 * Math::PI );
+        if ( radianAngle < 0.0f ) radianAngle += 2.0f * Math::PI;
+        rotation = radianAngle * 180.0f / Math::PI;
         ++lastVersion;
     }
 
-    const float& getRadiantAngle() const {
-        return radiantAngle;
+    const float& getRadianAngle() const {
+        return radianAngle;
     }
 
     const unsigned int getLastVersion() const {
-        return lastVersion
+        return lastVersion;
     }
 
 };
