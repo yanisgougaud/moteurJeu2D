@@ -35,7 +35,7 @@ public:
     {
     }
 
-    const sf::Sprite& Sprite::getSprite() const {
+    const sf::Sprite& getSprite() const {
         return sprite;
     }
 

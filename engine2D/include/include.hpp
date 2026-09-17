@@ -1,5 +1,7 @@
 #pragma once
 
+#include <SFML/Window/Keyboard.hpp>
+
 #include "components/collider/collider.hpp"
 #include "components/sprite/sprite.hpp"
 #include "components/transform/transform.hpp"
