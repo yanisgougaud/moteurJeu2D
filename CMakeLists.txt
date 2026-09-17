@@ -20,9 +20,10 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(SFML)
 
 add_executable(moteurJeu2D
-    src/main.cpp
+    src/main.cpp 
     engine2D/src/components/collider/collider.cpp
     engine2D/src/components/sprite/sprite.cpp
+    engine2D/src/physicsWorld/physicsWorld.cpp
 )
 
 target_include_directories(moteurJeu2D PRIVATE
