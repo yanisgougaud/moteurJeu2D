@@ -5,6 +5,7 @@
 
 #include <vector>
 
+
 class Collider {
 
     std::vector<Vector2D> vertices;
@@ -70,5 +71,7 @@ public:
     const unsigned int getLastVersion() const {
         return lastVersion;
     }
+
+    float getProjectedWidth( const Vector2D& direction ) const;
     
 };

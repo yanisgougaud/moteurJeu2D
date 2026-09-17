@@ -35,6 +35,7 @@ void Collider::calculateSize() {
 }
 
 Vector2D Collider::support( const Vector2D direction ) const {
+
     if ( vertices.empty() ) return transform.getPosition();
 
     const float cosAngle = std::cos( transform.getRadianAngle() );
@@ -76,21 +77,15 @@ Vector2D Collider::support( const Vector2D direction ) const {
 }
 
 
-Vector2D Collider::supportMinkowski(
-    const Collider& colliderA,
-    const Collider& colliderB,
-    const Vector2D direction
-) {
+Vector2D Collider::supportMinkowski( const Collider& colliderA, const Collider& colliderB, const Vector2D direction ) {
+    
     Vector2D pointA = colliderA.support( direction );
     Vector2D pointB = colliderB.support( -direction );
 
     return pointA - pointB;
 }
 
-bool Collider::nextSimplex(
-    std::vector<Vector2D>& simplex,
-    Vector2D& direction
-) {
+bool Collider::nextSimplex( std::vector<Vector2D>& simplex, Vector2D& direction ) {
 
     if ( simplex.size() == 2 ) {
 
@@ -107,8 +102,7 @@ bool Collider::nextSimplex(
 
             if ( direction.dotProduct( AO ) < - Math::EPSILON ) direction = -direction; 
         }
-        else
-        {
+        else {
             simplex = { A };
             direction = AO;
         }
@@ -192,3 +186,47 @@ bool Collider::checkCollision( const Collider& other ) const {
 
     return false;
 }
+
+float Collider::getProjectedWidth( const Vector2D& direction ) const {
+    
+    if ( vertices.empty() || direction.lengthSquared() <= Math::EPSILON ) return 0.0f;
+
+    Vector2D copyDirection = direction;
+    Vector2D perpendicular = copyDirection.perpendicular().normalized();
+
+    float minProjection = std::numeric_limits<float>::max();
+    float maxProjection = std::numeric_limits<float>::lowest();
+
+    const float cosAngle = std::cos( transform.getRadianAngle() );
+    const float sinAngle = std::sin( transform.getRadianAngle() );
+
+    Vector2D centerOfGravity = { transform.getCenterOfGravityX() - transform.getOriginX(), transform.getCenterOfGravityY() - transform.getOriginY() };
+    centerOfGravity.x *= transform.getScaleX();
+    centerOfGravity.y *= transform.getScaleY();
+
+    for ( const Vector2D& vertex : vertices ) {
+        
+        Vector2D vertexPosition = { -transform.getOriginX() + vertex.x, -transform.getOriginY() + vertex.y };
+
+        vertexPosition.x *= transform.getScaleX();
+        vertexPosition.y *= transform.getScaleY();
+
+        Vector2D relativePosition = vertexPosition - centerOfGravity;
+
+        Vector2D rotatedPosition = {
+            relativePosition.x * cosAngle + relativePosition.y * sinAngle,
+            -relativePosition.x * sinAngle + relativePosition.y * cosAngle
+        };
+
+        Vector2D finalPosition = rotatedPosition + centerOfGravity;
+        finalPosition += transform.getPosition();
+
+        float projection = finalPosition.dotProduct( perpendicular );
+
+        minProjection = std::min(minProjection, projection);
+        maxProjection = std::max(maxProjection, projection);
+    }
+
+    return maxProjection - minProjection;
+}
+

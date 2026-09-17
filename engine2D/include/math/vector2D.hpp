@@ -69,6 +69,13 @@ struct Vector2D
         return *this;
     }
 
+    Vector2D& operator/=( float scalar ) {
+        x /= scalar;
+        y /= scalar;
+
+        return *this;
+    }
+
     float length() const {
         return std::sqrt( x * x + y * y );
     }
