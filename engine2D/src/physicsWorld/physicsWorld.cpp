@@ -59,6 +59,9 @@ Vector2D PhysicsWorld::solveImplicitVelocity( const PhysicsBody& body, const Vec
 
         if ( !std::isfinite( nextVelocity.x ) || !std::isfinite( nextVelocity.y ) ) return currentVelocity;
 
+        if ( std::abs( nextVelocity.x < body.getMaterial().getFriction() ) ) nextVelocity.x = 0.0f
+        if ( std::abs( nextVelocity.y < body.getMaterial().getFriction() ) ) nextVelocity.y = 0.0f
+
         Vector2D difference = nextVelocity - newVelocity;
         newVelocity = nextVelocity;
 
