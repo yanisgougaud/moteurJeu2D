@@ -10,3 +10,7 @@
 #include "math/vector2D.hpp"
 #include "components/renderer/renderer.hpp"
 #include "components/input/input.hpp"
+#include "components/material/material.hpp"
+#include "components/physicsBody/physicsBody.hpp"
+#include "physicsWorld/physicsWorld.hpp"
+
