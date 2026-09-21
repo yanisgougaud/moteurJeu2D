@@ -55,9 +55,12 @@ Vector2D PhysicsWorld::solveImplicitVelocity( const PhysicsBody& body, const Vec
 
         ++iterations;
         Vector2D acceleration = otherForces + calculateDragForce( body, newVelocity ) / body.getMass();
-        Vector2D nextVelocity = newVelocity * ( 1.0f - relaxation ) + currentVelocity + acceleration * fixedDeltaTime * relaxation;
+        Vector2D nextVelocity = newVelocity * ( 1.0f - relaxation ) + ( currentVelocity + acceleration * fixedDeltaTime ) * relaxation;
 
         if ( !std::isfinite( nextVelocity.x ) || !std::isfinite( nextVelocity.y ) ) return currentVelocity;
+
+        if ( std::abs( nextVelocity.x < body.getMaterial().getFriction() ) ) nextVelocity.x = 0.0f
+        if ( std::abs( nextVelocity.y < body.getMaterial().getFriction() ) ) nextVelocity.y = 0.0f
 
         Vector2D difference = nextVelocity - newVelocity;
         newVelocity = nextVelocity;
@@ -75,7 +78,6 @@ void PhysicsWorld::step() {
         if (body == nullptr || body->getIsStatic() ) continue;
         
         body->addForce( gravity * entityGravityScale * body->getMass() );
-        body->addForce( calculateDragForce(*body) );
 
         Vector2D newVelocity = solveImplicitVelocity( *body, body->getForce() );
         Vector2D acceleration = ( newVelocity - body->getVelocity() ) / fixedDeltaTime;
