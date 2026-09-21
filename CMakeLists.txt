@@ -24,6 +24,8 @@ add_executable(moteurJeu2D
     engine2D/src/components/collider/collider.cpp
     engine2D/src/components/sprite/sprite.cpp
     engine2D/src/physicsWorld/physicsWorld.cpp
+    engine2D/src/player/player.cpp
+    engine2D/src/components/input/input.cpp
 )
 
 target_include_directories(moteurJeu2D PRIVATE

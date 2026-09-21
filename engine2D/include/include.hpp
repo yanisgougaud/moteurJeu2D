@@ -13,4 +13,5 @@
 #include "components/material/material.hpp"
 #include "components/physicsBody/physicsBody.hpp"
 #include "physicsWorld/physicsWorld.hpp"
+#include "player/player.hpp"
 
