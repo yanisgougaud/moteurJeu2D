@@ -3,6 +3,7 @@
 #include <stdexcept>
 #include <vector>
 
+#include "../math/math.hpp"
 #include "../components/collider/collider.hpp"
 #include "../components/physicsBody/physicsBody.hpp"
 

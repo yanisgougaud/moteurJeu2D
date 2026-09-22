@@ -6,18 +6,22 @@
 #include "../collider/collider.hpp"
 #include "../material/material.hpp"
 #include "../transform/transform.hpp"
+#include "../input/input.hpp"
 
 class PhysicsBody {
 
     Transform& transform;
     Collider& collider;
+    Material& material;
+    Input& input;
     float mass;
     Vector2D velocity;
     Vector2D acceleration;
     Vector2D force;
-    Material material;
     float dragCoefficient;
     float aerodynamicDepth;
+    float accelerationRelaxation;
+    float decelerationRelaxation;
     bool isStatic;
 
 public:
@@ -25,20 +29,26 @@ public:
     PhysicsBody(
         Transform& transform,
         Collider& collider,
-        const Material& material,
+        Material& material,
+        Input& input,
         float mass = 1.0f,
         float dragCoefficient = 1.0f,
         float aerodynamicDepth = 1.0f,
+        float accelerationRelaxation = 0.001f,
+        float decelerationRelaxation = 0.01f,
         bool isStatic = false
     )
         : transform( transform ),
           collider( collider ),
           material( material ),
+          input( input ),
           velocity( { 0.0f, 0.0f } ),
           acceleration( { 0.0f, 0.0f } ),
           force( { 0.0f, 0.0f } ),
-          dragCoefficient(dragCoefficient),
-          aerodynamicDepth(aerodynamicDepth),
+          dragCoefficient( dragCoefficient ),
+          aerodynamicDepth( aerodynamicDepth ),
+          accelerationRelaxation( accelerationRelaxation ),
+          decelerationRelaxation( decelerationRelaxation ),
           isStatic( isStatic )
     {
         setMass( mass );
@@ -52,6 +62,22 @@ public:
 
     Collider& getCollider() const {
         return collider;
+    }
+
+    void setMaterial( const Material& newMaterial ) {
+        material = newMaterial;
+    }
+
+    const Material& getMaterial() const {
+        return material;
+    }
+
+    void setInput( const Input& newInput ) {
+        input = newInput;
+    }
+
+    const Input& getInput() const {
+        return input;
     }
 
     void setMass( const float newMass ) {
@@ -96,14 +122,6 @@ public:
         force = { 0.0f, 0.0f };
     }
 
-    void setMaterial( const Material& newMaterial ) {
-        material = newMaterial;
-    }
-
-    const Material& getMaterial() const {
-        return material;
-    }
-
     void setStatic( const bool newIsStatic ) {
         isStatic = newIsStatic;
     }
@@ -128,8 +146,30 @@ public:
         return aerodynamicDepth;
     }
 
+    float getAccelerationRelaxation() const {
+        return accelerationRelaxation;
+    }
+
+    void setAccelerationRelaxation( float newAccelerationRelaxation ) {
+        if ( newAccelerationRelaxation <= 0.0f ) throw std::runtime_error( "La relaxation de l'accélération doit être strictement positive." );
+        accelerationRelaxation = newAccelerationRelaxation;
+    }
+
+    float getDecelerationRelaxation() const {
+        return decelerationRelaxation;
+    }
+
+    void setIDecelerationRelaxation(float newDecelerationRelaxation ) {
+        if ( newDecelerationRelaxation <= 0.0f ) throw std::runtime_error( "La relaxation de la décélération doit être strictement positive." );
+        decelerationRelaxation = newDecelerationRelaxation;
+    }
+
     bool getIsStatic() const {
         return isStatic;
+    }
+
+    void setIsStatic(bool newIsStatic ) {
+        isStatic = newIsStatic;
     }
 };
 
