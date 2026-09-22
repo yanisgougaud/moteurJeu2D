@@ -30,8 +30,7 @@ Vector2D PhysicsWorld::calculateDragForce( const PhysicsBody& body, const Vector
     float aerodynamicArea = calculateAerodynamicArea( body, direction );
 
     float dragForceMagnitude =
-        0.5f
-        * airDensity
+        airDensity
         * body.getDragCoefficient()
         * aerodynamicArea
         * speedSquared;
@@ -46,26 +45,26 @@ Vector2D PhysicsWorld::solveImplicitVelocity( const PhysicsBody& body, const Vec
     Vector2D newVelocity = currentVelocity;
 
     constexpr int maxIterations = 32;
-    constexpr float relaxation = 0.25f;
-    constexpr float convergenceEpsilon = 0.000001f;
-
-    int iterations = 0;
 
     for ( int i = 0; i < maxIterations; ++i ) {
 
-        ++iterations;
         Vector2D acceleration = otherForces + calculateDragForce( body, newVelocity ) / body.getMass();
+        
+        Vector2D targetVelocity = currentVelocity + acceleration * fixedDeltaTime;
+
+        float currentSpeedSquared = newVelocity.lengthSquared();
+        float targetSpeedSquared = targetVelocity.lengthSquared();
+
+        float relaxation = targetSpeedSquared > currentSpeedSquared ? body.getAccelerationRelaxation() : body.getDecelerationRelaxation();
+        
         Vector2D nextVelocity = newVelocity * ( 1.0f - relaxation ) + ( currentVelocity + acceleration * fixedDeltaTime ) * relaxation;
 
         if ( !std::isfinite( nextVelocity.x ) || !std::isfinite( nextVelocity.y ) ) return currentVelocity;
 
-        if ( std::abs( nextVelocity.x < body.getMaterial().getFriction() ) ) nextVelocity.x = 0.0f
-        if ( std::abs( nextVelocity.y < body.getMaterial().getFriction() ) ) nextVelocity.y = 0.0f
-
         Vector2D difference = nextVelocity - newVelocity;
         newVelocity = nextVelocity;
 
-        if ( difference.lengthSquared() <= convergenceEpsilon ) break;
+        if ( difference.lengthSquared() <= Math::EPSILON ) break;
     }
 
     return newVelocity;
@@ -75,12 +74,19 @@ void PhysicsWorld::step() {
 
     for ( PhysicsBody* body : bodies ) {
 
-        if (body == nullptr || body->getIsStatic() ) continue;
+        if ( body == nullptr || body->getIsStatic() ) continue;
         
         body->addForce( gravity * entityGravityScale * body->getMass() );
+        body->addForce( { body->getInput().getMovement().x * body->getInput().getSpeed(), body->getInput().isJumpPressed() ? 100.0f : 0.0f } );
 
         Vector2D newVelocity = solveImplicitVelocity( *body, body->getForce() );
         Vector2D acceleration = ( newVelocity - body->getVelocity() ) / fixedDeltaTime;
+
+        if ( std::abs( acceleration.x ) < body->getMaterial().getFriction() * 10 && std::abs( newVelocity.x ) < body->getMaterial().getFriction() * 50 ) newVelocity.x = 0.0f;
+        if ( std::abs( acceleration.y ) < body->getMaterial().getFriction() * 10 && std::abs( newVelocity.y ) < body->getMaterial().getFriction() * 50 ) newVelocity.y = 0.0f;
+
+        std::cout << "Acceleration : " << acceleration.x << "   " << acceleration.y << "\n";
+        std::cout << "Velocity : " << newVelocity.x << "   " << newVelocity.y << "\n";
 
         body->setAcceleration( acceleration );
         body->setVelocity( newVelocity );
