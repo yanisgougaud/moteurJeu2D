@@ -2,6 +2,7 @@
 
 #include <stdexcept>
 #include <vector>
+#include <SFML/Graphics/RenderWindow.hpp>
 
 #include "../components/collider/collider.hpp"
 #include "../components/physicsBody/physicsBody.hpp"
@@ -15,6 +16,8 @@ class PhysicsWorld {
     std::vector<PhysicsBody*> bodies;
     float physicsFPS;
     float fixedDeltaTime;
+    Vector2D screenSize;
+    const sf::RenderWindow& window;
 
     float calculateAerodynamicArea( const PhysicsBody& body, const Vector2D& direction ) const;
 
@@ -29,10 +32,12 @@ class PhysicsWorld {
     Vector2D calculateDragForce( const PhysicsBody& body, const Vector2D& velocity ) const;
 
     Vector2D solveImplicitVelocity( const PhysicsBody& body, const Vector2D& otherForces ) const;
+    void constrainToScreen( PhysicsBody& body );
 
 public:
 
     PhysicsWorld(
+        const sf::RenderWindow& window,
         const Vector2D& gravity = { 0.0f, -9.81f },
         float entityGravityScale = 1.0f,
         const Vector2D& wind = { 0.0f, 0.0f },
@@ -43,7 +48,9 @@ public:
           entityGravityScale( entityGravityScale ),
           wind( wind ),
           airDensity( airDensity ),
-          physicsFPS( physicsFPS )
+                    physicsFPS( physicsFPS ),
+          screenSize( { 0.0f, 0.0f } ),
+          window( window )
     {
         setPhysicsFPS( physicsFPS );
     }
@@ -101,6 +108,22 @@ public:
         return fixedDeltaTime;
     }
 
+    void updateScreenSize() {
+
+        const sf::Vector2u size = window.getSize();
+        screenSize = {
+            static_cast<float>( size.x ),
+            static_cast<float>( size.y )
+        };
+
+        if ( screenSize.x <= 0.0f || screenSize.y <= 0.0f )
+            throw std::runtime_error( "La taille de l'ecran doit être strictement positive." );
+    }
+
+    const Vector2D& getScreenSize() const {
+        return screenSize;
+    }
+
     void addBody( PhysicsBody& body ) {
         bodies.push_back( &body );
     }
@@ -113,4 +136,3 @@ public:
 
     void step();
 };
-

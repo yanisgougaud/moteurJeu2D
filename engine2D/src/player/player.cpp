@@ -8,7 +8,10 @@ void Player::update(const Input& input)
 {
     // Déplacement horizontal
     Vector2D movement = input.getMovement();
-    body.addForce({ movement.x * input.getSpeed(), 0.f });
+    body.addForce({
+        movement.x * input.getSpeed(),
+        movement.y * input.getSpeed()
+    });
 
     // Saut
     if (input.isJumpPressed()) {

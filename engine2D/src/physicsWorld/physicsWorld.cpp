@@ -1,6 +1,5 @@
 #include "../../include/physicsWorld/physicsWorld.hpp"
 
-#include <iostream>
 #include <algorithm>
 #include <cmath>
 
@@ -10,7 +9,6 @@ void PhysicsWorld::removeBody( PhysicsBody& body ) {
         bodies.end()
     );
 }
-
 float PhysicsWorld::calculateAerodynamicArea( const PhysicsBody& body, const Vector2D& direction ) const {
     
     float projectedWidth = body.getCollider().getProjectedWidth( direction );
@@ -68,7 +66,39 @@ Vector2D PhysicsWorld::solveImplicitVelocity( const PhysicsBody& body, const Vec
     return newVelocity;
 }
 
+void PhysicsWorld::constrainToScreen( PhysicsBody& body ) {
+
+    Transform& transform = body.getTransform();
+    Vector2D position = transform.getPosition();
+    Vector2D velocity = body.getVelocity();
+
+    if ( position.x < 0.0f ) {
+        position.x = 0.0f;
+        if ( velocity.x < 0.0f ) velocity.x = 0.0f;
+    }
+
+    if ( position.x > screenSize.x ) {
+        position.x = screenSize.x;
+        if ( velocity.x > 0.0f ) velocity.x = 0.0f;
+    }
+
+    if ( position.y < 0.0f ) {
+        position.y = 0.0f;
+        if ( velocity.y < 0.0f ) velocity.y = 0.0f;
+    }
+
+    if ( position.y > screenSize.y ) {
+        position.y = screenSize.y;
+        if ( velocity.y > 0.0f ) velocity.y = 0.0f;
+    }
+
+    transform.setPosition( position );
+    body.setVelocity( velocity );
+}
+
 void PhysicsWorld::step() {
+
+    updateScreenSize();
 
     for ( PhysicsBody* body : bodies ) {
 
@@ -83,9 +113,12 @@ void PhysicsWorld::step() {
         body->setVelocity( newVelocity );
         body->getTransform().setPosition( body->getTransform().getPosition() + newVelocity * fixedDeltaTime );
 
-        std::cout << ( body->getVelocity() * fixedDeltaTime ).x << "   " << ( body->getVelocity() * fixedDeltaTime ).y << "\n";
+        constrainToScreen( *body );
 
         body->clearForces();
     }
 
 }
+
+
+

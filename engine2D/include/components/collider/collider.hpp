@@ -15,6 +15,8 @@ class Collider {
 
     Vector2D support( Vector2D direction ) const;
 
+    Vector2D transformVertex( const Vector2D& vertex ) const;
+
     static Vector2D supportMinkowski(
         const Collider& colliderA,
         const Collider& colliderB,
@@ -67,6 +69,10 @@ public:
     }
 
     bool checkCollision( const Collider& otherCollider ) const;
+
+    Vector2D getSupportPoint( const Vector2D& direction ) const {
+        return support( direction );
+    }
 
     const unsigned int getLastVersion() const {
         return lastVersion;
