@@ -24,14 +24,14 @@ public:
         friction = newFriction;
     }
 
+    float getFriction() const {
+        return friction;
+    }
+
     void setRestitution( const float newRestitution ) {
 
         if ( newRestitution < 0.0f || newRestitution > 1.0f ) throw std::runtime_error( "La restitution doit etre comprise entre 0 et 1." );
         restitution = newRestitution;
-    }
-
-    float getFriction() const {
-        return friction;
     }
 
     float getRestitution() const {

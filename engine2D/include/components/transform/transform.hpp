@@ -56,11 +56,11 @@ public:
         return position;
     }
 
-    const float& getX() const {
+    float getX() const {
         return position.x;
     }
 
-    const float& getY() const {
+    float getY() const {
         return position.y;
     }
 
@@ -86,11 +86,11 @@ public:
         return scale;
     }
 
-    const float& getScaleX() const {
+    float getScaleX() const {
         return scale.x;
     }
 
-    const float& getScaleY() const {
+    float getScaleY() const {
         return scale.y;
     }
 
@@ -113,11 +113,11 @@ public:
         return origin;
     }
 
-    const float& getOriginX() const {
+    float getOriginX() const {
         return origin.x;
     }
 
-    const float& getOriginY() const {
+    float getOriginY() const {
         return origin.y;
     }
 
@@ -140,11 +140,11 @@ public:
         return centerOfGravity;
     }
 
-    const float& getCenterOfGravityX() const {
+    float getCenterOfGravityX() const {
         return centerOfGravity.x;
     }
 
-    const float& getCenterOfGravityY() const {
+    float getCenterOfGravityY() const {
         return centerOfGravity.y;
     }
 
@@ -155,7 +155,7 @@ public:
         ++lastVersion;
     }
 
-    const float& getRotation() const {
+    float getRotation() const {
         return rotation;
     }
 
@@ -166,11 +166,11 @@ public:
         ++lastVersion;
     }
 
-    const float& getRadianAngle() const {
+    float getRadianAngle() const {
         return radianAngle;
     }
 
-    const unsigned int getLastVersion() const {
+    unsigned int getLastVersion() const {
         return lastVersion;
     }
 

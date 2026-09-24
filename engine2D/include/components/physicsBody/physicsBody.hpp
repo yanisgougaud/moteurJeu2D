@@ -56,11 +56,11 @@ public:
         setAerodynamicDepth(aerodynamicDepth);
     }
 
-    Transform& getTransform() const {
+    Transform& getTransform() const { // Ne pas renvoyer de const Transform& // Titouan
         return transform;
     }
 
-    Collider& getCollider() const {
+    Collider& getCollider() const { // Ne pas renvoyer de const COllider& // Titouan
         return collider;
     }
 

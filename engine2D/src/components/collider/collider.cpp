@@ -95,7 +95,10 @@ bool Collider::nextSimplex( std::vector<Vector2D>& simplex, Vector2D& direction 
         Vector2D AB = B - A;
 
         if ( std::abs( AB.cross( AO ) ) < Math::EPSILON )
-            if ( AO.dotProduct( AB ) >= - Math::EPSILON && AO.lengthSquared() <= AB.lengthSquared() ) return true;
+            if ( AO.dotProduct( AB ) >= - Math::EPSILON && AO.lengthSquared() <= AB.lengthSquared() ) {
+                direction = AB.perpendicular();
+                return false; // Normalement on peut faire return true mais je met return false car je veux que la fonction ne renvoi true que s'il y a trois simplexe. // Titouan
+            }
 
         if ( AB.dotProduct( AO ) > Math::EPSILON ) {
             direction = AB.perpendicular();
@@ -230,3 +233,42 @@ float Collider::getProjectedWidth( const Vector2D& direction ) const {
     return maxProjection - minProjection;
 }
 
+GJKResult Collider::runGJK( const Collider& other ) const {
+
+    if ( vertices.empty() || other.vertices.empty() ) return GJKResult( false, {} );
+
+    Vector2D direction = other.transform.getPosition() - transform.getPosition();
+
+    if ( std::abs( direction.x ) < Math::EPSILON && std::abs( direction.y ) < Math::EPSILON ) direction = { 1.0f, 0.0f };
+
+    Vector2D point = supportMinkowski(
+            *this,
+            other,
+            direction
+        );
+
+    if ( point.dotProduct( direction ) < -Math::EPSILON ) return GJKResult( false, {} );
+
+    std::vector<Vector2D> simplex;
+    simplex.push_back(point);
+    direction = -point;
+
+    constexpr int maxIterations = 32;
+
+    for ( int i = 0; i < maxIterations; ++i ) {
+        
+        point = supportMinkowski(
+                *this,
+                other,
+                direction
+            );
+
+        if ( point.dotProduct( direction ) < -Math::EPSILON ) return GJKResult( false, simplex );
+
+        simplex.push_back( point );
+
+        if ( nextSimplex( simplex, direction ) ) return GJKResult( true, simplex );
+    }
+
+    return GJKResult( false, simplex );
+}
