@@ -2,7 +2,8 @@
 
 #include "../transform/transform.hpp"
 #include "../../math/Vector2D.hpp"
-#include "glkresult.hpp"
+#include "glkResult.hpp"
+#include "epaResult.hpp"
 
 #include <vector>
 
@@ -75,6 +76,8 @@ public:
 
     float getProjectedWidth( const Vector2D& direction ) const;
     
-    GJKResult Collider::runGJK( const Collider& other ) const;
+    GJKResult runGJK( const Collider& other ) const;
+
+    EPAResult runEPA( const Collider& other, const std::vector<Vector2D>& simplex ) const;
 
 };

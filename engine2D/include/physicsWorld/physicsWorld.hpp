@@ -113,5 +113,12 @@ public:
     }
 
     void step();
+
+    void detectCollisions( int maxIterations = 8 ) const;
+
+    void PhysicsWorld::correctPenetration( PhysicsBody& bodyA, PhysicsBody& bodyB, const Vector2D& normal, float penetrationDepth ) const;
+
+    void applyCollisionImpulse( PhysicsBody& bodyA, PhysicsBody& bodyB, const Vector2D& normal ) const;
+
 };
 

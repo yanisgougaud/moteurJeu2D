@@ -27,5 +27,11 @@ cmake-build-*/
 .DS_Store
 Thumbs.db
 
+# Main
+src/main.cpp
+
+#Assets
+assets/
+
 # Personnel
 note.txt
