@@ -5,6 +5,7 @@
 #include <cmath>
 #include <limits>
 #include <algorithm>
+#include <iostream>
 
 void Collider::calculateSize() {
 
@@ -272,3 +273,56 @@ GJKResult Collider::runGJK( const Collider& other ) const {
 
     return GJKResult( false, simplex );
 }
+
+EPAResult Collider::runEPA( const Collider& other, const std::vector<Vector2D>& simplex ) const {
+
+    if (simplex.size() < 3) return EPAResult( false, { 0.0f, 0.0f }, 0.0f );
+
+    std::vector<Vector2D> polytope = simplex;
+
+    constexpr int maxIterations = 64;
+
+    for ( int iteration = 0; iteration < maxIterations; ++iteration ) {
+        
+        float closestDistance = std::numeric_limits<float>::max();
+        Vector2D closestNormal;
+        std::size_t closestEdgeIndex = 0;
+
+        for ( std::size_t i = 0; i < polytope.size(); ++i ) {
+            
+            std::size_t nextIndex = ( i + 1 ) % polytope.size();
+            Vector2D A = polytope[i];
+            Vector2D B = polytope[nextIndex];
+            Vector2D edge = B - A;
+
+            if ( edge.lengthSquared() <= Math::EPSILON ) continue;
+
+            Vector2D normal = edge.perpendicular().normalized();
+            float distance = normal.dotProduct( A );
+
+            if ( distance < Math::EPSILON ) {
+                normal = -normal;
+                distance = -distance;
+            }
+
+            if ( distance < closestDistance ) {
+                closestDistance = distance;
+                closestNormal = normal;
+                closestEdgeIndex = nextIndex;
+            }
+        }
+
+        if (closestDistance == std::numeric_limits<float>::max() ) return EPAResult( false, { 0.0f, 0.0f }, 0.0f );
+
+        Vector2D supportPoint = supportMinkowski( *this, other, closestNormal );
+        float supportDistance = supportPoint.dotProduct(closestNormal);
+        float difference = supportDistance - closestDistance;
+
+        if ( difference <= Math::EPSILON ) return EPAResult( true, closestNormal, supportDistance );
+
+        polytope.insert( polytope.begin() + closestEdgeIndex,  supportPoint );
+    }
+
+    return EPAResult( false, { 0.0f, 0.0f }, 0.0f );
+}
+

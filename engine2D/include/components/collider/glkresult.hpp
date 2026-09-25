@@ -22,5 +22,9 @@ public:
     bool getHasCollision() const {
         return hasCollision;
     }
+
+    const std::vector<Vector2D>& getSimplex() const {
+        return simplex;
+    }
 };
 

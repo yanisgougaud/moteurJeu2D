@@ -72,6 +72,8 @@ Vector2D PhysicsWorld::solveImplicitVelocity( const PhysicsBody& body, const Vec
 
 void PhysicsWorld::step() {
 
+    detectCollisions();
+
     for ( PhysicsBody* body : bodies ) {
 
         if ( body == nullptr || body->getIsStatic() ) continue;
@@ -85,16 +87,93 @@ void PhysicsWorld::step() {
         if ( std::abs( acceleration.x ) < body->getMaterial().getFriction() * 10 && std::abs( newVelocity.x ) < body->getMaterial().getFriction() * 50 ) newVelocity.x = 0.0f;
         if ( std::abs( acceleration.y ) < body->getMaterial().getFriction() * 10 && std::abs( newVelocity.y ) < body->getMaterial().getFriction() * 50 ) newVelocity.y = 0.0f;
 
-        std::cout << "Acceleration : " << acceleration.x << "   " << acceleration.y << "\n";
-        std::cout << "Velocity : " << newVelocity.x << "   " << newVelocity.y << "\n";
-
         body->setAcceleration( acceleration );
         body->setVelocity( newVelocity );
         body->getTransform().setPosition( body->getTransform().getPosition() + newVelocity * fixedDeltaTime );
 
-        std::cout << ( body->getVelocity() * fixedDeltaTime ).x << "   " << ( body->getVelocity() * fixedDeltaTime ).y << "\n";
-
         body->clearForces();
     }
 
+}
+
+void PhysicsWorld::detectCollisions( int maxIterations ) const {
+
+    for (int iteration = 0; iteration < maxIterations; ++iteration) {
+
+        for ( std::size_t i = 0; i < bodies.size(); ++i ) {
+            
+            PhysicsBody* bodyA = bodies[i];
+
+            if ( bodyA == nullptr ) continue;
+
+            for ( std::size_t j = i + 1; j < bodies.size(); ++j ) {
+                
+                PhysicsBody* bodyB = bodies[j];
+
+                if ( bodyB == nullptr ) continue;
+
+                GJKResult gjkResult = bodyA->getCollider().runGJK( bodyB->getCollider() );
+
+                if ( !gjkResult.getHasCollision() ) continue;
+
+                EPAResult epaResult = bodyA->getCollider().runEPA( bodyB->getCollider(), gjkResult.getSimplex() );
+
+                if ( !epaResult.getIsValid() ) continue;
+
+                correctPenetration( *bodyA, *bodyB, epaResult.getNormal(), epaResult.getPenetrationDepth() );
+                applyCollisionImpulse( *bodyA, *bodyB, epaResult.getNormal() );
+
+            }
+        }
+    }
+}
+
+
+void PhysicsWorld::correctPenetration( PhysicsBody& bodyA, PhysicsBody& bodyB, const Vector2D& normal, float penetrationDepth ) const {
+
+    constexpr float penetrationSlop = 0.001f;
+    constexpr float correctionPercent = 1.0f;
+
+    float correctionDepth = penetrationDepth - Math::EPSILON;
+
+    if ( correctionDepth <= 0.0f ) return;
+
+    correctionDepth *= correctionPercent;
+
+    float inverseMassA = bodyA.getIsStatic() ? 0.0f : 1.0f / bodyA.getMass();
+    float inverseMassB = bodyB.getIsStatic() ? 0.0f : 1.0f / bodyB.getMass();
+    float inverseMassSum = inverseMassA + inverseMassB;
+
+    if ( inverseMassSum <= Math::EPSILON ) return;
+
+    Vector2D correction = normal * ( correctionDepth / inverseMassSum );
+    Vector2D positionA = bodyA.getTransform().getPosition();
+    Vector2D positionB = bodyB.getTransform().getPosition();
+    positionA -= correction * inverseMassA;
+    positionB += correction * inverseMassB;
+
+    bodyA.getTransform().setPosition( positionA );
+    bodyB.getTransform().setPosition( positionB );
+}
+
+void PhysicsWorld::applyCollisionImpulse( PhysicsBody& bodyA, PhysicsBody& bodyB, const Vector2D& normal ) const {
+
+    float inverseMassA = bodyA.getIsStatic() ? 0.0f : 1.0f / bodyA.getMass();
+    float inverseMassB = bodyB.getIsStatic() ? 0.0f : 1.0f / bodyB.getMass();
+    float inverseMassSum = inverseMassA + inverseMassB;
+
+    if ( inverseMassSum <= Math::EPSILON ) return;
+
+    Vector2D relativeVelocity = bodyB.getVelocity() - bodyA.getVelocity();
+
+    float velocityAlongNormal = relativeVelocity.dotProduct( normal );
+
+    if ( velocityAlongNormal >= 0.0f ) return;
+
+    float restitution = std::min( bodyA.getMaterial().getRestitution(), bodyB.getMaterial().getRestitution() );
+    float impulseMagnitude = -( 1.0f + restitution ) * velocityAlongNormal  / inverseMassSum;
+    Vector2D impulse = normal * impulseMagnitude;
+
+    bodyA.setVelocity( bodyA.getVelocity() - impulse * inverseMassA );
+    bodyB.setVelocity( bodyB.getVelocity() + impulse * inverseMassB );
 }
